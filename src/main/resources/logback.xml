@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds" debug="true">
+
+    <!--全局日志级别,修改某一个的日志级别，请修改对应的logger,TRACE, DEBUG, INFO, WARN, ERROR, ALL , OFF -->
+    <property name="logLevel" value="info"/>
+    <property name="maxHistory" value="7"/>
+    <property name="maxFileSize" value="100MB"/>
+    <property name="totalSizeCap" value="1000MB"/>
+    <property name="pattern" value="%d{'yyyy-MM-dd HH:mm:ss,SSS'} %p [%t] [%C{1}.%M:%L] - %m%n"/>
+
+    <appender name="exception" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!--See also http://logback.qos.ch/manual/appenders.html#RollingFileAppender-->
+        <File>/usr/webflux-demo/logs/common/exception</File>
+        <encoder>
+            <pattern>${pattern}</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <FileNamePattern>/usr/webflux-demo/logs/common/exception.%d{yyyy-MM-dd}.%i</FileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>20</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>${maxFileSize}</maxFileSize>
+        </triggeringPolicy>
+    </appender>
+
+    <appender name="info" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!--See also http://logback.qos.ch/manual/appenders.html#RollingFileAppender-->
+        <File>/usr/webflux-demo/logs/common/info</File>
+        <encoder>
+            <pattern>${pattern}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <FileNamePattern>/usr/webflux-demo/logs/common/info.%d{yyyy-MM-dd}.%i</FileNamePattern>
+            <maxFileSize>${maxFileSize}</maxFileSize>
+            <maxHistory>${maxHistory}</maxHistory>
+            <totalSizeCap>${totalSizeCap}</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${pattern}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- TRACE, DEBUG, INFO, WARN, ERROR, ALL , OFF ,${logLevel}-->
+    <root level="${logLevel}">
+        <appender-ref ref="info"/>
+        <appender-ref ref="exception"/>
+        <appender-ref ref="console"/>
+    </root>
+</configuration>
