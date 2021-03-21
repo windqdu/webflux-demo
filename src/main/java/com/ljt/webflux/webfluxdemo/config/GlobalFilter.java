@@ -39,7 +39,7 @@ public class GlobalFilter implements WebFilter {
 
         String method = exchange.getRequest().getMethodValue();
         if (HttpMethod.POST.name().equals(method)) {
-            return parsePostBody(exchange, chain).flatMap(v -> validReq(exchange, chain));
+            return parsePostBody(exchange, chain).flatMap(v -> validReq(v, chain));
         }
 
         return validReq(exchange, chain);
@@ -57,8 +57,8 @@ public class GlobalFilter implements WebFilter {
      * @return
      */
     private Mono<ServerWebExchange> parsePostBody(ServerWebExchange exchange, WebFilterChain chain) {
-        //使用filter解析post的body数据，会导致application/x-www-form-urlencoded类型的接口绑定参数失败，
-        //所以此处只解析了application/json接口的body数据
+        // 使用filter解析post的body数据，会导致application/x-www-form-urlencoded类型的接口绑定参数失败，
+        // 所以此处只解析了application/json接口的body数据
         MediaType mediaType = exchange.getRequest().getHeaders().getContentType();
         ServerHttpRequest request = exchange.getRequest();
 
@@ -75,7 +75,7 @@ public class GlobalFilter implements WebFilter {
 
                 return v1;
             }).map(v -> {
-                //读取request body到缓存
+                // 读取request body到缓存
                 String bodyStr = Joiner.on("").join(v);
                 log.info("bodyParams:{}", bodyStr);
 

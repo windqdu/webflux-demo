@@ -102,10 +102,17 @@ public class UserController {
 
     @GetMapping("/getAuth")
     public Mono<ResponseVO> getAuth(@RequestParam("cusId") String cusId) {
-        Mono<String> db = employeeRepository.findById(2L).map(Employee::toString);
+        Mono<String> db = employeeRepository.findEmployeeByCustomerId(cusId).map(Employee::toString);
         Mono<String> redis = reactiveRedisTemplate.opsForValue().get("hedu:employeeAuth:" + cusId);
 
         return Mono.zip(redis, db, (v1, v2) -> v1 + v2).map(ResponseVO::success);
+    }
+
+    @GetMapping("/getRedis")
+    public Mono<ResponseVO> getRedis(@RequestParam("cusId") String cusId) {
+        Mono<String> redis = reactiveRedisTemplate.opsForValue().get("hedu:employeeAuth:" + cusId).doOnSuccess(v->log.info("v:", v));
+
+        return redis.switchIfEmpty(Mono.just("{\"error\":0}")).map(ResponseVO::success);
     }
 
     @GetMapping("/getAuth1")
@@ -119,10 +126,10 @@ public class UserController {
 
         // 此处redis查询结果不存在，会返回一个"null"字符串，而不是Mono.empty(),而数据库查询不到会返回Mono.empty()
         Mono<JSONObject> redis = reactiveRedisTemplate.opsForValue().get("hedu:employeeAuth:" + cusId)
-                .filter(v -> StringUtils.hasLength(v) && !"null".equalsIgnoreCase(v)).map(JSONObject::fromObject);
+                .map(JSONObject::fromObject);
         // 此处过滤掉null值，则redisMono返回empty，此时switchIfEmpty才会起作用。
 
-        return redis.switchIfEmpty(db);
+        return redis.switchIfEmpty(db).switchIfEmpty(Mono.just(JSONObject.fromObject("{\"error\":0}")));
     }
 
     @GetMapping("/saveEmployee")
