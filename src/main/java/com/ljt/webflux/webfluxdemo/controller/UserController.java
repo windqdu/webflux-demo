@@ -25,12 +25,10 @@ import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.IntStream;
 
 /**
- * https://zhuanlan.zhihu.com/p/45351651
- * https://gitee.com/ffzs/WebFlux_r2dbc
+ * https://zhuanlan.zhihu.com/p/45351651 https://gitee.com/ffzs/WebFlux_r2dbc
  *
  * @author lijuntao1
  * @date 2020/12/25 16:06
@@ -93,16 +91,12 @@ public class UserController {
 
     @GetMapping("/updateEmployee")
     public Mono<ResponseVO> updateEmployee(@RequestParam("id") Long id, @RequestParam("name") String name) {
-        Mono<String> db = employeeRepository.findById(id)
-            .map(e -> e.withName(name))
-            .map(employeeRepository::save)
-            .flatMap(v -> v)
-            .map(e -> e.toString())
-            .doOnSuccess(v -> {
-                log.info("save success");
-            });
+        Mono<String> db = employeeRepository.findById(id).map(e -> e.withName(name)).map(employeeRepository::save)
+                .flatMap(v -> v).map(e -> e.toString()).doOnSuccess(v -> {
+                    log.info("save success");
+                });
 
-        //数据库查询不到会返回Mono.empty()，如果db没有查询到任何数据，则执行后面的
+        // 数据库查询不到会返回Mono.empty()，如果db没有查询到任何数据，则执行后面的
         return db.switchIfEmpty(Mono.just("no find id:" + id)).map(ResponseVO::success);
     }
 
@@ -117,14 +111,16 @@ public class UserController {
     @GetMapping("/getAuth1")
     public Mono getAuth1(@RequestParam("cusId") String cusId) {
 
-        Mono<JSONObject> db = employeeRepository.findById(2L).map(JSONObject::fromObject);
+        Mono<JSONObject> db = employeeRepository.findEmployeeByCustomerId(cusId).map(JSONObject::fromObject).map(v -> {
+            log.info("from db qry data,will set redis ");
+            reactiveRedisTemplate.opsForValue().set("hedu:employeeAuth:" + cusId, v.toString()).subscribe();
+            return v;
+        });
 
-        //此处redis查询结果不存在，会返回一个"null"字符串，而不是Mono.empty(),而数据库查询不到会返回Mono.empty()
-        Mono<JSONObject> redis = reactiveRedisTemplate.opsForValue()
-            .get("hedu:employeeAuth:" + cusId)
-            .filter(v -> StringUtils.hasLength(v) && !"null".equalsIgnoreCase(v))
-            .map(JSONObject::fromObject);
-        //此处过滤掉null值，则redisMono返回empty，此时switchIfEmpty才会起作用。
+        // 此处redis查询结果不存在，会返回一个"null"字符串，而不是Mono.empty(),而数据库查询不到会返回Mono.empty()
+        Mono<JSONObject> redis = reactiveRedisTemplate.opsForValue().get("hedu:employeeAuth:" + cusId)
+                .filter(v -> StringUtils.hasLength(v) && !"null".equalsIgnoreCase(v)).map(JSONObject::fromObject);
+        // 此处过滤掉null值，则redisMono返回empty，此时switchIfEmpty才会起作用。
 
         return redis.switchIfEmpty(db);
     }
@@ -164,7 +160,7 @@ public class UserController {
 
     }
 
-    @GetMapping(value ="/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping(value = "/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<Object> getSseUser(ServerWebExchange serverWebExchange, @RequestParam("num") Integer num) {
         Object[] arrStr = IntStream.range(0, num).mapToObj(String::valueOf).toArray();
         return Flux.fromArray(arrStr);
